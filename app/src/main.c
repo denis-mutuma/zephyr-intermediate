@@ -1,69 +1,62 @@
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(l1_task1, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(l2_task1, LOG_LEVEL_DBG);
+
+#define USE_MUTEX 1
 
 #define STACK_SIZE 1024
+#define PRIO 3
+#define INCREMENTS 1000000
 
-#define T_LOW 7
-#define T_MED 5
-#define T_HIGH 3
-#define T_COOP (-1)
+static volatile uint32_t counter = 0;
 
-void t_low_fn(void *p1, void *p2, void *p3) {
-    LOG_INF("[T_LOW] runs and then sleeps for 300ms");
+static struct k_sem done_sem;
 
-    for(int i = 0; i < 5; ++i) {
-        LOG_INF("[T_LOW] running - step=%d tick=%u", i+1, k_uptime_get_32());
-        k_msleep(300);  
-    }
-    
-    LOG_INF("[T_LOW] done");
-}
+static K_MUTEX_DEFINE(counter_mutex);
+static K_SEM_DEFINE(done_sem, 0, 2);
 
-void t_med_fn(void *p1, void *p2, void *p3) {
-    LOG_INF("[T_MED] runs and then sleeps for 200ms");
-    
-    for(int i = 0; i < 5; ++i) {
-        LOG_INF("[T_MED] running - step=%d tick=%u", i+1, k_uptime_get_32());
-        k_msleep(200);
+void worker_fn(void *p1, void *p2, void *p3) {
+    const char *name = k_thread_name_get(k_current_get());
+
+    for(int i = 0; i < INCREMENTS; ++i) {
+    #if USE_MUTEX
+        k_mutex_lock(&counter_mutex, K_FOREVER);
+    #endif
+        counter++;
+    #if USE_MUTEX
+        k_mutex_unlock(&counter_mutex);
+    #endif
     }
 
-    LOG_INF("[T_MED] done");
+    LOG_INF("[%s] finished", name);
+    k_sem_give(&done_sem);
 }
 
-void t_high_fn(void *p1, void *p2, void *p3) {
-    LOG_INF("[T_HIGH] runs and then sleeps for 100ms");
-    
-    for(int i = 0; i < 5; ++i) {
-        LOG_INF("[T_HIGH] running - step=%d tick=%u", i+1, k_uptime_get_32());
-        k_msleep(100);
-    }
-
-    LOG_INF("[T_HIGH] done");
-}
-
-void t_coop_fn(void *p1, void *p2, void *p3) {
-    LOG_INF("[T_COOP] runs 5 iteration of busy work and then yields");
-
-    for(int i = 0; i < 5; ++i) {
-        LOG_INF("[T_COOP] running - step=%d tick=%u", i+1, k_uptime_get_32());
-        k_msleep(200);
-    }
-
-    LOG_INF("[T_COOP] yielding");
-
-    k_yield();
-    LOG_INF("[T_COOP] done");
-}
-
-K_THREAD_DEFINE(t_low, STACK_SIZE, t_low_fn, NULL, NULL, NULL, T_LOW, 0, 0);
-K_THREAD_DEFINE(t_med, STACK_SIZE, t_med_fn, NULL, NULL, NULL, T_MED, 0, 0);
-K_THREAD_DEFINE(t_high, STACK_SIZE, t_high_fn, NULL, NULL, NULL, T_HIGH, 0, 0);
-K_THREAD_DEFINE(t_coop, STACK_SIZE, t_coop_fn, NULL, NULL, NULL, T_COOP, 0, 0);
+K_THREAD_DEFINE(worker_a, STACK_SIZE, worker_fn, NULL, NULL, NULL, PRIO, 0, 0);
+K_THREAD_DEFINE(worker_b, STACK_SIZE, worker_fn, NULL, NULL, NULL, PRIO, 0, 0);
 
 int main(void) {
-    LOG_INF("=== l1 task 1: thread interleaving ===");
-    LOG_INF("LOW prio=%d MED prio=%d HIGH prio=%d COOP prio=%d", T_LOW, T_MED, T_HIGH, T_COOP);
+
+    int64_t time = k_uptime_get();
+
+    LOG_INF("=== L2 Demo 2: Mutex Protection ===");
+    LOG_INF("Expected final value: %d", INCREMENTS * 2);
+
+    k_sem_take(&done_sem, K_FOREVER);
+    k_sem_take(&done_sem, K_FOREVER);
+
+    LOG_INF("Actual final value: %u", counter);
+
+    if(counter == INCREMENTS * 2) {
+        LOG_WRN("No race condition detected - try again");
+    } else {
+        LOG_ERR("Race condition confirmed: lost %d updates",
+        (INCREMENTS * 2) - counter);
+    }
+
+    LOG_INF("Exectution time: %lld ms", k_uptime_delta(&time));
+
     return 0;
 }
