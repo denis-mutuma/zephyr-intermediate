@@ -1,62 +1,59 @@
-#include <stdint.h>
+#include "zephyr/toolchain.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <stdbool.h>
 
-LOG_MODULE_REGISTER(l2_task1, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 
-#define USE_MUTEX 1
+#define STACK_SIZE    1024
+#define SENSOR_MS     100    /* sensor fires every 100ms */
+#define EVENT_COUNT   10     /* total sensor events to produce */
 
-#define STACK_SIZE 1024
-#define PRIO 3
-#define INCREMENTS 1000000
+static int total_events;
+static int total_processed;
 
-static volatile uint32_t counter = 0;
+static void sensor_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
 
-static struct k_sem done_sem;
-
-static K_MUTEX_DEFINE(counter_mutex);
-static K_SEM_DEFINE(done_sem, 0, 2);
-
-void worker_fn(void *p1, void *p2, void *p3) {
-    const char *name = k_thread_name_get(k_current_get());
-
-    for(int i = 0; i < INCREMENTS; ++i) {
-    #if USE_MUTEX
-        k_mutex_lock(&counter_mutex, K_FOREVER);
-    #endif
-        counter++;
-    #if USE_MUTEX
-        k_mutex_unlock(&counter_mutex);
-    #endif
-    }
-
-    LOG_INF("[%s] finished", name);
-    k_sem_give(&done_sem);
+    total_processed++;
+    LOG_INF("[HANDLER] processed event %d tick=%u", total_processed, k_uptime_get_32());
 }
 
-K_THREAD_DEFINE(worker_a, STACK_SIZE, worker_fn, NULL, NULL, NULL, PRIO, 0, 0);
-K_THREAD_DEFINE(worker_b, STACK_SIZE, worker_fn, NULL, NULL, NULL, PRIO, 0, 0);
+K_WORK_DEFINE(sensor_work, sensor_handler);
 
-int main(void) {
+static void sensor_sim_fn(void *p1, void *p2, void *p3)
+{
 
-    int64_t time = k_uptime_get();
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
+    ARG_UNUSED(p3);
 
-    LOG_INF("=== L2 Demo 2: Mutex Protection ===");
-    LOG_INF("Expected final value: %d", INCREMENTS * 2);
+    for (int i = 0; i < EVENT_COUNT; i++) {
+        k_msleep(SENSOR_MS);
 
-    k_sem_take(&done_sem, K_FOREVER);
-    k_sem_take(&done_sem, K_FOREVER);
+        total_events++;
+        LOG_INF("[SENSOR] event %d  tick=%u", i, k_uptime_get_32());
 
-    LOG_INF("Actual final value: %u", counter);
-
-    if(counter == INCREMENTS * 2) {
-        LOG_WRN("No race condition detected - try again");
-    } else {
-        LOG_ERR("Race condition confirmed: lost %d updates",
-        (INCREMENTS * 2) - counter);
+        int ret = k_work_submit(&sensor_work);
+        if(ret < 0) {
+            LOG_ERR("submit failed: %d", ret);
+        }
     }
 
-    LOG_INF("Exectution time: %lld ms", k_uptime_delta(&time));
+    LOG_INF("[SENSOR] all events produced");
+}
+
+K_THREAD_DEFINE(sensor_thread, STACK_SIZE, sensor_sim_fn, NULL, NULL, NULL, 5, 0, 0);
+
+int main(void)
+{
+    LOG_INF("=== L3 Homework: Polling to Workqueue ===");
+    LOG_INF("using a work queue: sensor fires every %dms", SENSOR_MS);
+    LOG_INF("waiting for events to be processed");
+
+    /* Wait long enough for all events to complete */
+    k_msleep((EVENT_COUNT + 2) * SENSOR_MS + 500);
 
     return 0;
 }
