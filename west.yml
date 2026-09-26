@@ -8,6 +8,4 @@ manifest:
       import:
         name-allowlist:
           - cmsis_6
-          - cmsis_6
           - hal_espressif
-          
