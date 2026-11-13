@@ -1,0 +1,54 @@
+Local capture on native_sim (Zephyr 4.4.0). This is not an instructor-provided trace.
+Priorities: control 7, maintenance 4.
+Workload: event every 250 ms, maintenance k_busy_wait(45000), deadline 10 ms.
+Backend: CONFIG_TRACING_BACKEND_POSIX. Decoder: babeltrace2 2.1.2.
+
+babeltrace2 2.1.2 aborts on Zephyr's stock CTF metadata. It passes a packet
+clock snapshot for a stream class that does not use one. The text below is
+babeltrace2's output after renaming the event-header field from timestamp to
+ts in a copy of subsys/tracing/ctf/tsdl/metadata. The field is still 32 bits,
+and the payload lines are unchanged.
+
+Sequence 0. ctrl_ready arg1 is ready_ms (500). ctrl_done arg1 is the latency
+in milliseconds (40). The scheduler runs maintenance, not control.
+
+timer_expiry_enter: { id = 134628620 }
+msgq_put_enter: { id = 134628696, timeout = 0 }
+thread_sched_ready: { thread_id = 134629056, name = "control" }
+msgq_put_exit: { id = 134628696, timeout = 0, ret = 0 }
+named_event: { name = "ctrl_ready", arg0 = 0, arg1 = 500 }
+semaphore_give_enter: { id = 134628760 }
+thread_sched_ready: { thread_id = 134628896, name = "maintenance" }
+semaphore_give_exit: { id = 134628760 }
+timer_expiry_exit: { id = 134628620 }
+timer_expiry_enter: { id = 134632548 }
+timer_expiry_exit: { id = 134632548 }
+isr_exit: 
+thread_switched_out: { thread_id = 134633216, name = "idle" }
+thread_switched_in: { thread_id = 134628896, name = "maintenance" }
+semaphore_take_exit: { id = 134628760, timeout = 4294957296, ret = 0 }
+thread_busy_wait_enter: { usec_to_wait = 45000 }
+isr_enter: 
+timer_expiry_enter: { id = 134632548 }
+timer_expiry_exit: { id = 134632548 }
+isr_exit: 
+isr_enter: 
+timer_expiry_enter: { id = 134632548 }
+timer_expiry_exit: { id = 134632548 }
+isr_exit: 
+isr_enter: 
+timer_expiry_enter: { id = 134632548 }
+timer_expiry_exit: { id = 134632548 }
+isr_exit: 
+isr_enter: 
+timer_expiry_enter: { id = 134632548 }
+timer_expiry_exit: { id = 134632548 }
+isr_exit: 
+thread_busy_wait_exit: { usec_to_wait = 45000 }
+semaphore_take_enter: { id = 134628760, timeout = 4294957296 }
+semaphore_take_blocking: { id = 134628760, timeout = 4294957296 }
+thread_sched_pend: { thread_id = 134628896, name = "maintenance" }
+thread_switched_out: { thread_id = 134628896, name = "maintenance" }
+thread_switched_in: { thread_id = 134629056, name = "control" }
+msgq_get_exit: { id = 134628696, timeout = 4294957296, ret = 0 }
+named_event: { name = "ctrl_done", arg0 = 0, arg1 = 40 }

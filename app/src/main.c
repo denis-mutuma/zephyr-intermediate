@@ -6,10 +6,19 @@
 LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 
 #define STACK_SIZE            2048
+/*
+ * Zephyr treats a lower number as a higher priority.
+ * Control must run before maintenance, so control is 4 and maintenance is 7.
+ * The starter had this reversed (control 7, maintenance 4).
+ */
 #define CONTROL_PRIORITY         4
 #define MAINTENANCE_PRIORITY     7
 #define EVENT_PERIOD_MS        250
 #define MAINTENANCE_LOAD_US  45000
+/*
+ * Control work starts within 10 ms, measured from the timer's ready_ms
+ * (ctrl_ready) to the control thread dequeuing the event (ctrl_done).
+ */
 #define RESPONSE_DEADLINE_MS 10
 
 struct control_event {
@@ -37,16 +46,14 @@ static void event_timer_expiry(struct k_timer *timer)
     /* Timer expiry runs in interrupt context, so never wait here. */
     int ret = k_msgq_put(&control_queue, &event, K_NO_WAIT);
 
-    sys_trace_named_event("ctrl_ready", event.seq, event.ready_ms);
-
     if (ret != 0) {
         return;
     }
 
+    sys_trace_named_event("ctrl_ready", event.seq, event.ready_ms);
+
     /* Both threads become ready when the timer interrupt returns. */
     k_sem_give(&maintenance_start);
-
-    /* TODO: Add an application trace event for this sequence. */
 }
 
 K_TIMER_DEFINE(event_timer, event_timer_expiry, NULL);
@@ -63,8 +70,12 @@ static void control_fn(void *p1, void *p2, void *p3)
         struct control_event event;
         int ret = k_msgq_get(&control_queue, &event, K_FOREVER);
 
-        static uint32_t misses;
+        if (ret != 0) {
+            LOG_ERR("[CONTROL] receive failed: %d", ret);
+            continue;
+        }
 
+        static uint32_t misses;
         uint32_t latency_ms = k_uptime_get_32() - event.ready_ms;
 
         sys_trace_named_event("ctrl_done", event.seq, latency_ms);
@@ -77,16 +88,6 @@ static void control_fn(void *p1, void *p2, void *p3)
 
         LOG_INF("[CONTROL] seq=%u latency=%u ms deadline=%u misses=%u",
                      event.seq, latency_ms, RESPONSE_DEADLINE_MS, misses);
-
-        if (ret != 0) {
-            LOG_ERR("[CONTROL] receive failed: %d", ret);
-            continue;
-        }
-
-        /* TODO: Define a response-time guarantee. */
-        /* TODO: Measure latency and count every deadline miss. */
-        /* TODO: Rate-limit repeated warning messages. */
-        /* TODO: Add an application trace event for completion. */
     }
 }
 

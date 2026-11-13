@@ -1,0 +1,38 @@
+Corrected priorities: control 4, maintenance 7.
+Same workload and the same 10 ms detector. The miss count stays 0.
+Board: native_sim
+Zephyr: 4.4.0
+Workload: event every 250 ms, maintenance k_busy_wait(45000), deadline 10 ms
+Detector: latency from the timer's ready_ms to the control thread's k_msgq_get
+Tracing: CONFIG_TRACING, CONFIG_TRACING_CTF, CONFIG_TRACING_BACKEND_POSIX
+
+uart connected to pseudotty: /dev/pts/1
+*** Booting Zephyr OS build v4.4.0 ***
+[00:00:00.000,000] <inf> homework: === L6 Homework: Runtime Investigation ===
+[00:00:00.000,000] <inf> homework: Control work must start within 10 ms
+[00:00:00.000,000] <inf> homework: Inspect, measure, trace, explain, and correct the delay
+[00:00:00.500,000] <inf> homework: [CONTROL] seq=0 latency=0 ms deadline=10 misses=0
+[00:00:00.750,000] <inf> homework: [CONTROL] seq=1 latency=0 ms deadline=10 misses=0
+[00:00:01.000,000] <inf> homework: [CONTROL] seq=2 latency=0 ms deadline=10 misses=0
+[00:00:01.250,000] <inf> homework: [CONTROL] seq=3 latency=0 ms deadline=10 misses=0
+[00:00:01.500,000] <inf> homework: [CONTROL] seq=4 latency=0 ms deadline=10 misses=0
+[00:00:01.750,000] <inf> homework: [CONTROL] seq=5 latency=0 ms deadline=10 misses=0
+[00:00:02.000,000] <inf> homework: [CONTROL] seq=6 latency=0 ms deadline=10 misses=0
+[00:00:02.250,000] <inf> homework: [CONTROL] seq=7 latency=0 ms deadline=10 misses=0
+[00:00:02.500,000] <inf> homework: [CONTROL] seq=8 latency=0 ms deadline=10 misses=0
+[00:00:02.750,000] <inf> homework: [CONTROL] seq=9 latency=0 ms deadline=10 misses=0
+[00:00:03.000,000] <inf> homework: [CONTROL] seq=10 latency=0 ms deadline=10 misses=0
+[00:00:03.250,000] <inf> homework: [CONTROL] seq=11 latency=0 ms deadline=10 misses=0
+[00:00:03.500,000] <inf> homework: [CONTROL] seq=12 latency=0 ms deadline=10 misses=0
+[00:00:03.750,000] <inf> homework: [CONTROL] seq=13 latency=0 ms deadline=10 misses=0
+[00:00:04.000,000] <inf> homework: [CONTROL] seq=14 latency=0 ms deadline=10 misses=0
+[00:00:04.250,000] <inf> homework: [CONTROL] seq=15 latency=0 ms deadline=10 misses=0
+[00:00:04.500,000] <inf> homework: [CONTROL] seq=16 latency=0 ms deadline=10 misses=0
+[00:00:04.750,000] <inf> homework: [CONTROL] seq=17 latency=0 ms deadline=10 misses=0
+[00:00:05.000,000] <inf> homework: [CONTROL] seq=18 latency=0 ms deadline=10 misses=0
+[00:00:05.250,000] <inf> homework: [CONTROL] seq=19 latency=0 ms deadline=10 misses=0
+[00:00:05.500,000] <inf> homework: [CONTROL] seq=20 latency=0 ms deadline=10 misses=0
+[00:00:05.750,000] <inf> homework: [CONTROL] seq=21 latency=0 ms deadline=10 misses=0
+[00:00:06.000,000] <inf> homework: [CONTROL] seq=22 latency=0 ms deadline=10 misses=0
+[00:00:06.250,000] <inf> homework: [CONTROL] seq=23 latency=0 ms deadline=10 misses=0
+[00:00:06.500,000] <inf> homework: [CONTROL] seq=24 latency=0 ms deadline=10 misses=0
