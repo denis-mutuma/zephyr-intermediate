@@ -43,12 +43,34 @@ void t_high_fn(void *p1, void *p2, void *p3) {
     LOG_INF("[T_HIGH] done");
 }
 
+/*
+ * Observed interleaving of the three preemptible threads. A smaller
+ * priority number is more urgent: T_HIGH is 3 and sleeps 100 ms, T_MED
+ * is 5 and sleeps 200 ms, T_LOW is 7 and sleeps 300 ms. While several
+ * are ready, the most urgent runs. k_msleep() makes that thread unready,
+ * so the next most urgent ready thread runs, and a wakeup of a more
+ * urgent thread preempts a less urgent one.
+ * Observed: main prints its banner at tick 1000, right after T_COOP
+ * returns and before any preemptible thread. Those threads then log
+ * step 1 as T_HIGH, T_MED, T_LOW. T_HIGH keeps logging about every
+ * 100 ms until tick 1550; T_MED and T_LOW log only while every more
+ * urgent thread is asleep.
+ *
+ * Cooperative behavior: T_COOP (priority -1) busy-waits, so the tick
+ * cannot take the CPU and the five steps finish before any lower-priority
+ * thread runs. k_yield() only lets ready threads of equal or higher
+ * priority run, so the lower-priority threads progress only after the
+ * cooperative thread returns, sleeps, or blocks. Nothing of equal or
+ * higher priority is ready, so the yield returns at once and those
+ * threads run only after t_coop_fn returns.
+ */
+
 void t_coop_fn(void *p1, void *p2, void *p3) {
     LOG_INF("[T_COOP] runs 5 iteration of busy work and then yields");
 
     for(int i = 0; i < 5; ++i) {
         LOG_INF("[T_COOP] running - step=%d tick=%u", i+1, k_uptime_get_32());
-        k_msleep(200);
+        k_busy_wait(200000);
     }
 
     LOG_INF("[T_COOP] yielding");
